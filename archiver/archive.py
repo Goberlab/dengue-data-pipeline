@@ -157,7 +157,8 @@ class Store:
     def ensure_release(self, tag: str, notes: str) -> None:
         if self.gh("release", "view", tag, check_rc=False).returncode == 0:
             return
-        r = self.gh("release", "create", tag, "--title", tag, "--notes", notes, check_rc=False)
+        latest = ["--latest=false"] if tag == STATE_TAG else []
+        r = self.gh("release", "create", tag, "--title", tag, "--notes", notes, *latest, check_rc=False)
         # a parallel job may have created it first
         if r.returncode != 0 and self.gh("release", "view", tag, check_rc=False).returncode != 0:
             raise ArchiveError(f"cannot create release {tag}: {r.stderr.strip()}")
