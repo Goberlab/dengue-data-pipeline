@@ -232,8 +232,11 @@ def sala_diaria(store: Store) -> dict:
     cut = re.search(r"(\d{2}-\d{2}-\d{4}) Fecha de corte", text)
     check(cut is not None, "sala_diaria: no 'Fecha de corte' found")
 
-    record = {"url": SALA_DIARIA_URL, "etag": header(h, "ETag"), "last_modified": header(h, "Last-Modified")}
-    store.add("sala_diaria_dengue.html", body, record, compress=True)
+    validators = {"etag": header(h, "ETag"), "last_modified": header(h, "Last-Modified")}
+    if sha256(body) == state.get("sha256"):  # server ignored the conditional request
+        store.commit({**state, **validators}, {})
+        return {"changed": False}
+    store.add("sala_diaria_dengue.html", body, {"url": SALA_DIARIA_URL, **validators}, compress=True)
     found = set()
     for m in re.finditer(r"data:application/vnd\.openxmlformats[^;\"']*;base64,([A-Za-z0-9+/=]+)", html):
         name = re.search(r"download\s*=\s*(?:&#39;|'|\")([^&'\"]+)", html[m.end():m.end() + 900])
@@ -413,7 +416,9 @@ def observatorio(store: Store, departments: list[str] | None, force: bool) -> di
         last = state.get("captured_at_utc")
         age_days = (dt.datetime.now(dt.timezone.utc) - dt.datetime.fromisoformat(last.replace("Z", "+00:00"))).days \
             if last else None
-        if not force and state.get("semana_corte") == cut_week and age_days is not None and age_days < 7:
+        # a subset capture (a test, a pilot run) never stands in for the weekly national one
+        if (not force and state.get("all_departments") and state.get("semana_corte") == cut_week
+                and age_days is not None and age_days < 7):
             browser.close()
             store.commit(state, {})
             return {"changed": False, "semana_corte": cut_week}
@@ -446,8 +451,11 @@ def observatorio(store: Store, departments: list[str] | None, force: bool) -> di
                 time.sleep(3)
         browser.close()
     summary = {"semana_corte": cut_week, "exports": len(captured), "slider_years": slider}
-    store.commit({"semana_corte": cut_week, "captured_at_utc": store.stamps["fetched_at_utc"],
-                  "departments": depas}, summary)
+    if departments:  # keep the last national capture's fingerprint; this one was partial
+        store.commit(state, summary)
+    else:
+        store.commit({"semana_corte": cut_week, "captured_at_utc": store.stamps["fetched_at_utc"],
+                      "all_departments": True, "departments": depas}, summary)
     return {"changed": True, **summary}
 
 
