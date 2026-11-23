@@ -25,5 +25,7 @@ jobs:
           probe sala_pdf -I https://www.dge.gob.pe/portal/docs/vigilancia/sala/2026/SE44/dengue.pdf
           probe da_api "https://www.datosabiertos.gob.pe/api/3/action/package_show?id=vigilancia-epidemiol%C3%B3gica-de-dengue"
           probe da_csv -I https://www.datosabiertos.gob.pe/sites/default/files/datos_abiertos_vigilancia_dengue_2000_2025_0.csv
-          echo "--- same, curl default UA ---"
-          printf '%-14s ' da_api_curlua; curl -s -o /dev/null --max-time 60 -w '%{http_code}\n' "https://www.datosabiertos.gob.pe/api/3/action/package_show?id=vigilancia-epidemiol%C3%B3gica-de-dengue"
+          echo "--- datosabiertos with a plain browser UA ---"
+          UA="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+          probe da_api_plain "https://www.datosabiertos.gob.pe/api/3/action/package_show?id=vigilancia-epidemiol%C3%B3gica-de-dengue"
+          probe da_csv_plain -I https://www.datosabiertos.gob.pe/sites/default/files/datos_abiertos_vigilancia_dengue_2000_2025_0.csv
