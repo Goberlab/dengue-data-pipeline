@@ -1,0 +1,29 @@
+# Temporary: checks whether GitHub-hosted runners can reach the Peruvian sources.
+# Remove before merging the archiver.
+name: probe-reachability
+on:
+  push:
+    branches: [archiver]
+    paths: [.github/workflows/probe-reachability.yml]
+  workflow_dispatch:
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Runner egress IP and location
+        run: curl -s https://ipinfo.io/json | grep -E '"(ip|city|region|country|org)"' || true
+      - name: Probe sources (HEAD or tiny GET, one request each)
+        run: |
+          UA="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Safari/537.36 GoberlabDengueArchiver/0.1 (+https://github.com/Goberlab/dengue-data-pipeline)"
+          probe() {
+            printf '%-14s ' "$1"
+            curl -s -o /dev/null --max-time 60 -A "$UA" -w '%{http_code} %{size_download}B %{time_total}s %{remote_ip}\n' "${@:2}" || echo "curl exit $?"
+          }
+          probe sala_diaria -I https://app7.dge.gob.pe/maps2/sala_diaria_dengue.html
+          probe observatorio https://app7.dge.gob.pe/maps2/shiny_observatorio_web/
+          probe sala_pdf -I https://www.dge.gob.pe/portal/docs/vigilancia/sala/2026/SE44/dengue.pdf
+          probe da_api "https://www.datosabiertos.gob.pe/api/3/action/package_show?id=vigilancia-epidemiol%C3%B3gica-de-dengue"
+          probe da_csv -I https://www.datosabiertos.gob.pe/sites/default/files/datos_abiertos_vigilancia_dengue_2000_2025_0.csv
+          echo "--- same, curl default UA ---"
+          printf '%-14s ' da_api_curlua; curl -s -o /dev/null --max-time 60 -w '%{http_code}\n' "https://www.datosabiertos.gob.pe/api/3/action/package_show?id=vigilancia-epidemiol%C3%B3gica-de-dengue"
