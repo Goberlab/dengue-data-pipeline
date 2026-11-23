@@ -1,0 +1,12 @@
+# Raw and derived data never go in git. Code, docs and the map only.
+data/
+*.csv
+*.xlsx
+*.parquet
+*.nc
+*.tif
+.scratch/
+.venv/
+__pycache__/
+.ipynb_checkpoints/
+.DS_Store
